@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 
 const RIOT_API_KEY = process.env.RIOT_API_KEY;
-const REGION_API_BASE = 'https.na1.api.riotgames.com'; // e.g., na1, euw1, kr
-const ROUTING_VALUE_API_BASE = 'https.americas.api.riotgames.com'; // e.g., americas, europe, asia
+const REGION_API_BASE = 'https://na1.api.riotgames.com'; // e.g., na1, euw1, kr
+const ROUTING_VALUE_API_BASE = 'https://americas.api.riotgames.com'; // e.g., americas, europe, asia
 
 // Helper function to make Riot API requests
 const riotApiRequest = async (url: string) => {
