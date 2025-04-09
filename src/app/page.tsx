@@ -1,102 +1,126 @@
 import Image from "next/image";
+import { useState } from 'react';
+
+// Define an interface for the match data structure
+interface Match {
+  matchId: string;
+  gameMode: string;
+  win: boolean;
+  championName: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [summonerName, setSummonerName] = useState('');
+  const [matches, setMatches] = useState<Match[]>([]); // State for match data
+  const [loading, setLoading] = useState(false);      // State for loading indicator
+  const [error, setError] = useState<string | null>(null); // State for error messages
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const handleSearch = async () => {
+    if (!summonerName) return;
+    setLoading(true);
+    setError(null);
+    setMatches([]); // Clear previous results
+
+    try {
+      const response = await fetch(`/api/match-history?summonerName=${encodeURIComponent(summonerName)}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Error: ${response.status}`);
+      }
+
+      if (data.matches && data.matches.length > 0) {
+        setMatches(data.matches);
+      } else if (data.message) {
+        setError(data.message); // Handle cases like 'No recent matches found.'
+      } else {
+         setMatches([]); // Ensure matches are cleared if API returns empty success
+      }
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to fetch match history.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-start min-h-screen py-12 bg-gray-900 text-white">
+      <main className="flex flex-col items-center w-full flex-1 px-4 sm:px-20">
+        <h1 className="text-4xl sm:text-6xl font-bold mb-8 text-center">
+          LoL Match History
+        </h1>
+
+        {/* Search Input and Button */} 
+        <div className="flex flex-col sm:flex-row items-center mb-8 w-full max-w-md">
+          <input
+            type="text"
+            value={summonerName}
+            onChange={(e) => setSummonerName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()} // Allow search on Enter key
+            placeholder="Enter Summoner Name (e.g., Doublelift)"
+            className="flex-grow px-4 py-2 mb-4 sm:mb-0 sm:mr-4 border border-gray-700 rounded bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full sm:w-auto"
+            aria-label="Summoner Name Input"
+          />
+          <button
+            onClick={handleSearch}
+            disabled={loading || !summonerName} // Disable button when loading or input is empty
+            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+            aria-label="Search Summoner Button"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {loading ? 'Searching...' : 'Search'}
+          </button>
+        </div>
+
+        {/* Results Area */} 
+        <div id="results" className="mt-8 w-full max-w-4xl">
+          {/* Loading Indicator */}
+          {loading && <p className="text-center text-gray-400">Loading matches...</p>}
+
+          {/* Error Message */}
+          {error && <p className="text-center text-red-500">Error: {error}</p>}
+
+          {/* Match List */}
+          {!loading && !error && matches.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold mb-4 text-center">Last 5 Games</h2>
+              {matches.map((match) => (
+                <div key={match.matchId} className={`p-4 rounded shadow-md ${match.win ? 'bg-green-800 bg-opacity-30 border-l-4 border-green-500' : 'bg-red-800 bg-opacity-30 border-l-4 border-red-500'}`}>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <div className="mb-2 sm:mb-0">
+                      <p className="text-lg font-semibold">{match.championName}</p>
+                      <p className="text-sm text-gray-400">{match.gameMode.replace(/_/g, ' ').replace('CLASSIC', 'Summoner\'s Rift')}</p>
+                    </div>
+                    <div className={`text-lg font-bold ${match.win ? 'text-green-400' : 'text-red-400'}`}>
+                      {match.win ? 'Victory' : 'Defeat'}
+                    </div>
+                    <div className="text-right">
+                       <p className="text-md">{match.kills} / <span className="text-red-400">{match.deaths}</span> / {match.assists}</p>
+                       <p className="text-sm text-gray-500">KDA</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+           {/* Initial Prompt/No Matches Found (after search) */}
+           {!loading && !error && matches.length === 0 && summonerName !== '' && (
+              <p className="text-center text-gray-400">No recent matches found for this summoner or initial state.</p>
+           )}
+            {/* Initial Prompt (before search) */}
+           {!loading && !error && matches.length === 0 && summonerName === '' && (
+             <p className="text-center text-gray-400">Enter a summoner name to see their last 5 games.</p>
+           )}
         </div>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      <footer className="w-full h-20 flex justify-center items-center border-t border-gray-700 mt-12">
+        <p className="text-gray-500">Powered by Next.js & Riot API</p>
       </footer>
     </div>
   );
